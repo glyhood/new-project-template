@@ -1,0 +1,36 @@
+## This section imports the main CI base templates which contains most of the CI/CD pipeline logic. This ensures we have a standardised and centralized CI configuration for agile iterations and also ensures that we maintain a DRY configuration for all other CI/CD pipelines across projects.
+include:
+  - project: "demo/devops/pipeline-template-definitions"
+    file: "build.yml"
+
+## This section lists the logical order of the application development workflow
+stages:
+#  - maven ## Uncomment this for java/springboot applications
+  - build
+  - deploy
+
+## Uncomment this section for java/springboot applications for production builds
+#maven_build_prod:
+#  extends: .maven_build
+#  environment:
+#    name: production
+#  only:
+#    - main
+
+## This section builds the docker image for production deployments
+build_image_prod:
+  extends: .build_image
+  environment:
+    name: production
+  only:
+    - main
+
+## This section will trigger ArgoCD to deploy the image to the production kubernetes cluster for live traffic.
+deploy_prod_app:
+  extends: .deploy_prod_app
+  environment:
+    name: production
+  script:
+    - sed -i "s/$CI_PROJECT_NAME:.*/$CI_PROJECT_NAME:$BUILD_JOB_ID/gI" $manifest_dir/demo-cluster/example-argo-manifest.yaml
+  only:
+    - main
